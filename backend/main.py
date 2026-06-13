@@ -138,3 +138,6 @@ async def get_live_stats():
         if status in ["OPENED", "CLICKED"]:
             stats["opened"] += 1
     return stats
+@app.get("/")
+async def root():
+    return {"status": "online", "message": "Xeno AI CRM Backend is operational"}
