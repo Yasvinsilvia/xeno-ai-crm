@@ -109,6 +109,7 @@ async def process_intent(request: IntentRequest):
         return {"reply": "I couldn't find any opted-in users matching that criteria."}
 
     simulator_url = os.environ.get("SIMULATOR_URL", "http://localhost:8001")
+    await client.post(f"{simulator_url}/api/stub/send", json={...})
 
     async with httpx.AsyncClient() as client:
         for _, user in segment.iterrows():

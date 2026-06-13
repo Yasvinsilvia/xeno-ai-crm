@@ -4,6 +4,7 @@ import asyncio
 import random
 import httpx
 from pydantic import BaseModel
+import os
 
 app = FastAPI()
 
@@ -16,7 +17,7 @@ app.add_middleware(
 )
 
 # ⚠️ IMPORTANT: When deploying to Render, change localhost:8000 to your live CRM API URL!
-CRM_WEBHOOK_URL = "http://localhost:8000/api/webhooks/delivery-receipt"
+CRM_WEBHOOK_URL = os.getenv("CRM_BACKEND_URL", "http://localhost:8000/api/webhooks/delivery-receipt")
 
 class MessagePayload(BaseModel):
     message_id: str
