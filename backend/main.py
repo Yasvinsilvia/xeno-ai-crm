@@ -3,6 +3,7 @@ import uuid
 import httpx
 import pandas as pd
 import numpy as np
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -18,18 +19,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- ROBUST DATA LOADING ---
-# Find directory where this script lives, regardless of where the server runs
-base_dir = os.path.dirname(os.path.abspath(__file__))
-csv_path = os.path.join(base_dir, 'Online Retail.xlsx')
+# --- HEALTH CHECK ---
+@app.get("/")
+async def root():
+    return {"status": "online", "message": "Xeno AI CRM Backend is operational"}
 
-print(f"Attempting to load dataset from: {csv_path}")
+# --- ROBUST DATA LOADING ---
+base_dir = os.path.dirname(os.path.abspath(__file__))
+# Ensure this filename matches the one in your folder exactly (Case Sensitive)
+excel_path = os.path.join(base_dir, 'Online Retail.xlsx')
+
+print(f"Attempting to load dataset from: {excel_path}")
 
 try:
-    # Use read_excel for .xlsx files
-    raw_df = pd.read_excel(csv_path)
+    # Use read_excel for your .xlsx file
+    raw_df = pd.read_excel(excel_path)
     
-    # Standard cleanup
     raw_df = raw_df.dropna(subset=['CustomerID'])
     raw_df['LineTotal'] = raw_df['Quantity'] * raw_df['UnitPrice']
     raw_df['InvoiceDate'] = pd.to_datetime(raw_df['InvoiceDate'])
@@ -103,7 +108,6 @@ async def process_intent(request: IntentRequest):
     if audience_count == 0:
         return {"reply": "I couldn't find any opted-in users matching that criteria."}
 
-    # Use SIMULATOR_URL from environment variables (Render/Vercel)
     simulator_url = os.environ.get("SIMULATOR_URL", "http://localhost:8001")
 
     async with httpx.AsyncClient() as client:
@@ -119,7 +123,6 @@ async def process_intent(request: IntentRequest):
                 })
             except httpx.RequestError:
                 message_tracking[msg_id] = "FAILED"
-                print(f"Failed to reach simulator at {simulator_url}")
 
     return {"reply": f"Found {audience_count} targeted shoppers. Campaign dispatched."}
 
@@ -138,6 +141,8 @@ async def get_live_stats():
         if status in ["OPENED", "CLICKED"]:
             stats["opened"] += 1
     return stats
-@app.get("/")
-async def root():
-    return {"status": "online", "message": "Xeno AI CRM Backend is operational"}
+
+# --- PORT BINDING FOR RENDER ---
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
